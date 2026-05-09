@@ -2,6 +2,10 @@ name: EDS Block Quality Reviewer
 description: Review AEM Edge Delivery Services pull requests for block quality and Core Web Vitals risk signals.
 author: Neeraj Raja
 
+branding:
+  icon: alert-circle
+  color: purple
+
 inputs:
   config-path:
     description: Path to the reviewer config in the checked-out EDS repository.
@@ -16,7 +20,7 @@ runs:
   using: composite
   steps:
     - name: Set up Node.js
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@v6
       with:
         node-version: 22
 

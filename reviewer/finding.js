@@ -26,13 +26,7 @@ function dedupeFindings(findings) {
   });
 }
 
-function normalizeSeverity(severity) {
-  if (['error', 'warning', 'notice'].includes(severity)) return severity;
-  return 'warning';
-}
-
 export {
   compareFindings,
   dedupeFindings,
-  normalizeSeverity,
 };

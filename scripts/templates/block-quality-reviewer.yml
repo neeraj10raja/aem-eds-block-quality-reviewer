@@ -23,14 +23,14 @@ jobs:
 
     steps:
       - name: Checkout trusted reviewer code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           path: reviewer-src
           persist-credentials: false
 
       - name: Checkout pull request content
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.sha }}
@@ -38,15 +38,9 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: reviewer-src/BLOCK_QUALITY_REVIEWER_DIR/package-lock.json
-
-      - name: Install reviewer dependencies
-        run: npm ci
-        working-directory: reviewer-src/BLOCK_QUALITY_REVIEWER_DIR
 
       - name: Syntax check reviewer
         run: |

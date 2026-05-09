@@ -2,6 +2,25 @@
   "name": "aem-eds-block-quality-reviewer",
   "version": "0.2.0",
   "description": "GitHub PR reviewer for AEM Edge Delivery Services block quality, Core Web Vitals risk, and EDS best practices.",
+  "keywords": [
+    "aem",
+    "edge-delivery-services",
+    "core-web-vitals",
+    "code-review",
+    "github-action",
+    "lcp",
+    "inp",
+    "cls"
+  ],
+  "homepage": "https://github.com/neeraj10raja/aem-eds-block-quality-reviewer#readme",
+  "bugs": {
+    "url": "https://github.com/neeraj10raja/aem-eds-block-quality-reviewer/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neeraj10raja/aem-eds-block-quality-reviewer.git"
+  },
+  "author": "Neeraj Raja",
   "type": "module",
   "main": "reviewer/index.js",
   "scripts": {
