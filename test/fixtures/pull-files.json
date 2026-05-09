@@ -1,0 +1,7 @@
+[
+  {
+    "filename": "blocks/hero/hero.js",
+    "status": "modified",
+    "patch": "@@ -1,4 +1,4 @@\n export default function decorate(block) {\n+  const img = document.createElement('img');\n   img.loading = 'lazy';\n }"
+  }
+]

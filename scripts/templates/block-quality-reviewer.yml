@@ -1,0 +1,61 @@
+name: EDS Block Quality Reviewer
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'blocks/**/*.js'
+      - 'blocks/**/*.css'
+      - 'scripts/**/*.js'
+      - 'styles/**/*.css'
+      - 'head.html'
+      - 'block-quality-reviewer.config.json'
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+
+jobs:
+  review:
+    if: ${{ github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout trusted reviewer code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: reviewer-src
+          persist-credentials: false
+
+      - name: Checkout pull request content
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: reviewer-src/BLOCK_QUALITY_REVIEWER_DIR/package-lock.json
+
+      - name: Install reviewer dependencies
+        run: npm ci
+        working-directory: reviewer-src/BLOCK_QUALITY_REVIEWER_DIR
+
+      - name: Syntax check reviewer
+        run: |
+          for file in reviewer-src/BLOCK_QUALITY_REVIEWER_DIR/*.js; do
+            node --check "$file"
+          done
+
+      - name: Review EDS block quality
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node ../reviewer-src/BLOCK_QUALITY_REVIEWER_DIR/index.js
+        working-directory: pr

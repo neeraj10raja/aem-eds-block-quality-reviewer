@@ -1,0 +1,32 @@
+name: EDS Block Quality Reviewer
+description: Review AEM Edge Delivery Services pull requests for block quality and Core Web Vitals risk signals.
+author: Neeraj Raja
+
+inputs:
+  config-path:
+    description: Path to the reviewer config in the checked-out EDS repository.
+    required: false
+    default: block-quality-reviewer.config.json
+  changed-files-json:
+    description: Optional JSON string or file path containing GitHub pull files payload for local/dry-run usage.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v5
+      with:
+        node-version: 22
+
+    - name: Install reviewer runtime
+      shell: bash
+      run: npm ci --omit=dev --prefix "$GITHUB_ACTION_PATH/reviewer"
+
+    - name: Review EDS block quality
+      shell: bash
+      env:
+        BLOCK_QUALITY_CONFIG_PATH: ${{ inputs.config-path }}
+        CHANGED_FILES_JSON: ${{ inputs.changed-files-json }}
+      run: node "$GITHUB_ACTION_PATH/reviewer/index.js"

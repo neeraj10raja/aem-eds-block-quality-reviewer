@@ -1,0 +1,20 @@
+{
+  "name": "aem-eds-block-quality-reviewer",
+  "version": "0.2.0",
+  "description": "GitHub PR reviewer for AEM Edge Delivery Services block quality, Core Web Vitals risk, and EDS best practices.",
+  "type": "module",
+  "main": "reviewer/index.js",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "lint": "eslint reviewer scripts test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.32.0"
+  }
+}

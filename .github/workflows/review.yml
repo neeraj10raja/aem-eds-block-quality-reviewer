@@ -1,0 +1,35 @@
+name: EDS Block Quality Reusable Review
+
+on:
+  workflow_call:
+    inputs:
+      config-path:
+        description: Path to the reviewer config in the caller repository.
+        required: false
+        type: string
+        default: block-quality-reviewer.config.json
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: write
+
+jobs:
+  review:
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout pull request content
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Review EDS block quality
+        uses: neeraj10raja/aem-eds-block-quality-reviewer@v1
+        with:
+          config-path: ${{ inputs.config-path }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
