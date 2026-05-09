@@ -17,6 +17,7 @@ const THIRD_PARTY_HEAD_PATTERN = /<script[^>]+(?:src=["']https?:\/\/|.*?(?:googl
 const DOM_QUERY_PATTERN = /\b(?:document|block|el|element)\.(?:querySelector|querySelectorAll|getElementById|getElementsByClassName|getElementsByTagName)\(/g;
 const LAYOUT_READ_PATTERN = /\b(?:getBoundingClientRect|offsetWidth|offsetHeight|clientWidth|clientHeight|scrollWidth|scrollHeight|scrollTop|scrollLeft)\b/;
 const STYLE_WRITE_PATTERN = /\.(?:style|classList)\b|setAttribute\(\s*['"]class|insertAdjacentHTML\(|append\(|prepend\(/;
+// Skip comment-only lines so examples or disabled code do not trigger per-line rules.
 const COMMENT_LINE_PATTERN = /^\s*(\/\/|\/\*|\*|<!--)/;
 
 function isDisabled(config, ruleId) {

@@ -20,10 +20,6 @@ runs:
       with:
         node-version: 22
 
-    - name: Install reviewer runtime
-      shell: bash
-      run: npm ci --omit=dev --prefix "$GITHUB_ACTION_PATH/reviewer"
-
     - name: Review EDS block quality
       shell: bash
       env:

@@ -38,7 +38,7 @@ This reviewer catches those risks before they are merged.
 
 ## Install Into An EDS Repo
 
-Recommended path: use the published action from your EDS repo.
+Recommended path after this repository is pushed to GitHub and tagged:
 
 ```yaml
 name: EDS Block Quality
@@ -69,6 +69,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+Until the public GitHub repo and `v1` tag exist, use the air-gapped install
+below. The YAML above is the intended public install path.
 
 For platform teams that prefer reusable workflows:
 
@@ -260,13 +263,16 @@ Sources:
 
 ```text
 reviewer/
-├── index.js       # GitHub Action orchestrator
-├── rules.js       # EDS/CWV static rules
-├── review.js      # Changed-file filtering
-├── report.js      # Sticky PR comment markdown
-├── github-api.js  # GitHub REST client
-├── config.js      # Config loading
-└── diff-utils.js  # Patch line parsing
+├── index.js         # GitHub Action orchestrator
+├── rules.js         # EDS/CWV static rules
+├── suppressions.js  # Inline suppression parsing
+├── review.js        # Changed-file filtering
+├── report.js        # Sticky PR comment markdown
+├── github-api.js    # GitHub REST client
+├── config.js        # Config loading
+├── path-utils.js    # Repo path and glob helpers
+├── finding.js       # Finding sorting/deduplication
+└── diff-utils.js    # Patch line parsing
 ```
 
 ## License
