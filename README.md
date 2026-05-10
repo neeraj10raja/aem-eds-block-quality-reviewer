@@ -2,6 +2,7 @@
 
 > GitHub PR reviewer for Adobe AEM Edge Delivery Services block quality, Core Web Vitals risk, and EDS best practices.
 
+[![GitHub Marketplace](https://img.shields.io/badge/marketplace-EDS%20Block%20Quality%20Reviewer-purple)](https://github.com/marketplace/actions/eds-block-quality-reviewer)
 ![Node 22](https://img.shields.io/badge/node-%3E%3D22-blue)
 ![License](https://img.shields.io/badge/license-Apache%202.0-lightgrey)
 
