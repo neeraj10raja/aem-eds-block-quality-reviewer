@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-05-10
+
+### Fixed
+
+- Documented permissions changed from `issues: write` to `pull-requests: write` in the README install yaml, the reusable workflow, and the air-gapped template. Posting a comment on a pull request requires `pull-requests: write`; the previous `issues: write` declaration caused HTTP 403 "Resource not accessible by integration" when the action tried to post the sticky review comment. The reviewer code itself did not change.
+- README install yaml bumped from `actions/checkout@v5` to `actions/checkout@v6` for consistency with the action's own `actions/setup-node@v6`.
+
 ## [0.2.0] - 2026-05-09
 
 ### Added
