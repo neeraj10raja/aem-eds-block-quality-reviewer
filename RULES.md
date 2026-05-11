@@ -21,6 +21,8 @@ Severities:
 | `hero-css-background-image` | warning | Flags CSS background images in likely LCP blocks. |
 | `css-import` | error | Flags CSS `@import`, which can delay stylesheet discovery. |
 | `file-size-budget` | warning | Flags changed files over configured JS/CSS budgets. |
+| `head-inline-script` | warning | Flags `<script>` blocks without `src=` in `head.html`. |
+| `top-level-await-script` | warning | Flags top-level `await` in configured global scripts. |
 
 ## INP
 
@@ -35,6 +37,8 @@ Severities:
 | `sync-xhr` | error | Flags synchronous XHR calls. |
 | `sync-storage-in-block` | notice/warning | Flags synchronous local/session storage access inside block JavaScript. |
 | `intersection-observer-no-disconnect` | notice | Flags observers without a `disconnect()` call in the file. |
+| `mutation-observer-no-disconnect` | notice | Flags `new MutationObserver()` without a `.disconnect()` call in the file. |
+| `setinterval-no-clearinterval` | notice | Flags files using `setInterval` without `clearInterval`. |
 
 ## CLS
 
@@ -44,6 +48,7 @@ Severities:
 | `layout-transition` | warning | Flags transitions of layout-affecting properties. |
 | `keyframes-layout-property` | warning | Flags keyframes that animate layout properties. |
 | `font-face-no-display` | warning | Flags `@font-face` blocks without `font-display`. |
+| `image-without-dimensions` | warning | Flags `createElement('img')` without `.width`/`.height` set in the next 10 lines. |
 
 ## EDS
 
@@ -55,6 +60,12 @@ Severities:
 | `block-css-unscoped-selector` | warning | Flags block CSS selectors that are not scoped to the block class. |
 | `binary-asset-in-code-repo` | notice | Flags page-content image/video assets committed to the code repo. |
 | `important-density` | notice | Flags CSS files with many `!important` declarations. |
+| `inner-html-overwrite` | warning | Flags assignments to `.innerHTML`/`.outerHTML` that overwrite authored content. |
+| `console-statement` | notice | Flags `console.log`/`warn`/`error`/`debug` left in project JS. |
+| `debugger-statement` | warning | Flags `debugger` statements left in project JS. |
+| `unsafe-eval` | error | Flags `eval()` and `new Function()` (CSP-defeating, XSS sink). |
+| `unsafe-window-open` | warning | Flags `window.open(..., '_blank')` without `'noopener'` in the features arg. |
+| `css-universal-selector` | notice | Flags unscoped universal `*` selectors at the top level of block CSS. |
 | `diff-not-available` | notice | Flags files where GitHub omitted patch data. |
 | `file-too-large` | notice | Flags files skipped by the configured safety size cap. |
 | `unsafe-path` | error | Flags unsafe repo paths in the PR file list. |

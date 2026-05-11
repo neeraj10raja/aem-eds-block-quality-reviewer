@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-05-10
+
+### Added — 11 new rules targeting common junior-dev mistakes
+
+LCP:
+
+- `head-inline-script` — flags inline `<script>` blocks in `head.html`, not just third-party loaders.
+- `top-level-await-script` — flags top-level `await` in configured global scripts. Top-level await halts the eager phase and directly delays LCP.
+
+INP:
+
+- `mutation-observer-no-disconnect` — companion to the existing IntersectionObserver rule.
+- `setinterval-no-clearinterval` — file-level check that pairs `setInterval` with a `clearInterval`.
+
+CLS:
+
+- `image-without-dimensions` — flags dynamically created `<img>`/`<source>`/`<picture>` without explicit width and height set in the next 10 lines. The single biggest CLS contributor on EDS sites.
+
+EDS (correctness, hygiene, security):
+
+- `inner-html-overwrite` — flags `.innerHTML`/`.outerHTML` assignments that wipe authored content (does not fire for `+=` append patterns).
+- `console-statement` — flags `console.log`/`warn`/`error`/`debug`/`info`/`trace`/`table` left in project JS.
+- `debugger-statement` — flags `debugger` statements left in code.
+- `unsafe-eval` — flags `eval()` and `new Function()`. Severity: error.
+- `unsafe-window-open` — flags `window.open(..., '_blank')` without `noopener` in the features arg (reverse-tabnabbing vector).
+- `css-universal-selector` — flags unscoped universal `*` selectors at the top level of block CSS.
+
+All new rules support inline suppressions and per-rule severity overrides via the existing config infrastructure.
+
 ## [0.2.1] - 2026-05-10
 
 ### Fixed

@@ -100,6 +100,130 @@ export default function decorate(block) {
   assert.equal(findings.some((finding) => finding.rule_id === 'block-fetch-in-decorator'), false);
 });
 
+test('analyzeFile detects v0.3 junior-dev mistake rules', () => {
+  const jsFindings = analyzeFile('blocks/cards/cards.js', `
+export default function decorate(block) {
+  block.innerHTML = '<div>replaced</div>';
+  const img = document.createElement('img');
+  img.src = './x.png';
+  block.appendChild(img);
+  console.log('decorating', block);
+  debugger;
+  eval('1 + 1');
+  window.open('https://example.com', '_blank');
+  new MutationObserver(() => {});
+  setInterval(() => block.classList.toggle('x'), 1000);
+}
+`, mergeConfig());
+
+  assert.equal(jsFindings.some((f) => f.rule_id === 'inner-html-overwrite'), true);
+  assert.equal(jsFindings.some((f) => f.rule_id === 'image-without-dimensions'), true);
+  assert.equal(jsFindings.some((f) => f.rule_id === 'console-statement'), true);
+  assert.equal(jsFindings.some((f) => f.rule_id === 'debugger-statement'), true);
+  assert.equal(jsFindings.some((f) => f.rule_id === 'unsafe-eval'), true);
+  assert.equal(jsFindings.find((f) => f.rule_id === 'unsafe-eval').severity, 'error');
+  assert.equal(jsFindings.some((f) => f.rule_id === 'unsafe-window-open'), true);
+  assert.equal(jsFindings.some((f) => f.rule_id === 'mutation-observer-no-disconnect'), true);
+  assert.equal(jsFindings.some((f) => f.rule_id === 'setinterval-no-clearinterval'), true);
+});
+
+test('image-without-dimensions stays silent when width and height are set', () => {
+  const findings = analyzeFile('blocks/cards/cards.js', `
+export default function decorate(block) {
+  const img = document.createElement('img');
+  img.width = 600;
+  img.height = 400;
+  block.appendChild(img);
+}
+`, mergeConfig());
+
+  assert.equal(findings.some((f) => f.rule_id === 'image-without-dimensions'), false);
+});
+
+test('mutation-observer-no-disconnect stays silent when disconnect is called somewhere', () => {
+  const findings = analyzeFile('blocks/cards/cards.js', `
+export default function decorate(block) {
+  const obs = new MutationObserver(() => {
+    obs.disconnect();
+  });
+  obs.observe(block, { childList: true });
+}
+`, mergeConfig());
+
+  assert.equal(findings.some((f) => f.rule_id === 'mutation-observer-no-disconnect'), false);
+});
+
+test('top-level-await-script fires only in configured global scripts', () => {
+  const globalFindings = analyzeFile('scripts/scripts.js', `
+await loadFonts();
+export function loadPage() {}
+`, mergeConfig());
+  const blockFindings = analyzeFile('blocks/cards/cards.js', `
+await loadFonts();
+export default function decorate(block) {}
+`, mergeConfig());
+
+  assert.equal(globalFindings.some((f) => f.rule_id === 'top-level-await-script'), true);
+  assert.equal(blockFindings.some((f) => f.rule_id === 'top-level-await-script'), false);
+});
+
+test('setinterval-no-clearinterval stays silent when clearInterval is paired', () => {
+  const findings = analyzeFile('blocks/cards/cards.js', `
+export default function decorate(block) {
+  const id = setInterval(() => {}, 1000);
+  block.addEventListener('click', () => clearInterval(id));
+}
+`, mergeConfig());
+
+  assert.equal(findings.some((f) => f.rule_id === 'setinterval-no-clearinterval'), false);
+});
+
+test('unsafe-window-open stays silent when noopener is passed', () => {
+  const findings = analyzeFile('blocks/cards/cards.js', `
+export default function decorate(block) {
+  block.addEventListener('click', () => {
+    window.open('https://example.com', '_blank', 'noopener,noreferrer');
+  });
+}
+`, mergeConfig());
+
+  assert.equal(findings.some((f) => f.rule_id === 'unsafe-window-open'), false);
+});
+
+test('inner-html-overwrite stays silent when innerHTML is only appended to', () => {
+  const findings = analyzeFile('blocks/cards/cards.js', `
+export default function decorate(block) {
+  block.innerHTML += '<span>x</span>';
+}
+`, mergeConfig());
+
+  assert.equal(findings.some((f) => f.rule_id === 'inner-html-overwrite'), false);
+});
+
+test('head-inline-script flags inline script tags and ignores external ones', () => {
+  const inline = analyzeFile('head.html', '<script>window.dataLayer = [];</script>', mergeConfig());
+  const external = analyzeFile('head.html', '<script src="/scripts/scripts.js" type="module"></script>', mergeConfig());
+
+  assert.equal(inline.some((f) => f.rule_id === 'head-inline-script'), true);
+  assert.equal(external.some((f) => f.rule_id === 'head-inline-script'), false);
+});
+
+test('css-universal-selector flags unscoped wildcard rules and accepts scoped ones', () => {
+  const unscoped = analyzeFile('blocks/cards/cards.css', `
+* {
+  box-sizing: border-box;
+}
+`, mergeConfig());
+  const scoped = analyzeFile('blocks/cards/cards.css', `
+.cards * {
+  box-sizing: border-box;
+}
+`, mergeConfig());
+
+  assert.equal(unscoped.some((f) => f.rule_id === 'css-universal-selector'), true);
+  assert.equal(scoped.some((f) => f.rule_id === 'css-universal-selector'), false);
+});
+
 test('analyzeFile detects top enterprise risk rules', () => {
   const jsFindings = analyzeFile('blocks/hero/hero.js', `
 export default function decorate(block) {

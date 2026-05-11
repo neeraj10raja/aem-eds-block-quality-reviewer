@@ -1,6 +1,6 @@
 {
   "name": "aem-eds-block-quality-reviewer",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "GitHub PR reviewer for AEM Edge Delivery Services block quality, Core Web Vitals risk, and EDS best practices.",
   "keywords": [
     "aem",

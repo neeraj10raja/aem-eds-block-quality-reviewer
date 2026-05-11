@@ -14,9 +14,22 @@ const IMAGE_OR_VIDEO_EXTENSIONS = new Set([
 
 const FRAMEWORK_PATTERN = /(?:from\s+['"]|import\s*\(\s*['"]|require\(\s*['"])(react|react-dom|vue|@angular\/core|jquery|lodash)['"]/;
 const THIRD_PARTY_HEAD_PATTERN = /<script[^>]+(?:src=["']https?:\/\/|.*?(?:googletagmanager|google-analytics|launch-|alloy\.min\.js|web-sdk))/i;
+const INLINE_HEAD_SCRIPT_PATTERN = /<script(?![^>]*\bsrc\s*=)[^>]*>/i;
 const DOM_QUERY_PATTERN = /\b(?:document|block|el|element)\.(?:querySelector|querySelectorAll|getElementById|getElementsByClassName|getElementsByTagName)\(/g;
 const LAYOUT_READ_PATTERN = /\b(?:getBoundingClientRect|offsetWidth|offsetHeight|clientWidth|clientHeight|scrollWidth|scrollHeight|scrollTop|scrollLeft)\b/;
 const STYLE_WRITE_PATTERN = /\.(?:style|classList)\b|setAttribute\(\s*['"]class|insertAdjacentHTML\(|append\(|prepend\(/;
+const INNER_HTML_OVERWRITE_PATTERN = /\.(?:innerHTML|outerHTML)\s*=(?!=)/;
+const DYNAMIC_IMAGE_PATTERN = /createElement\(\s*['"`](img|source|picture)['"`]\s*\)|new\s+Image\s*\(/;
+const IMAGE_DIMENSION_PATTERN = /\.(?:width|height)\s*=|setAttribute\(\s*['"`](?:width|height)['"`]/;
+const CONSOLE_STATEMENT_PATTERN = /\bconsole\.(?:log|warn|error|debug|info|trace|table)\s*\(/;
+const DEBUGGER_STATEMENT_PATTERN = /^\s*debugger\s*;?\s*$/;
+const UNSAFE_EVAL_PATTERN = /\beval\s*\(|\bnew\s+Function\s*\(/;
+const WINDOW_OPEN_BLANK_PATTERN = /window\.open\s*\(/;
+const MUTATION_OBSERVER_PATTERN = /new\s+MutationObserver\s*\(/;
+const TOP_LEVEL_AWAIT_PATTERN = /^await\b/;
+const SET_INTERVAL_PATTERN = /\bsetInterval\s*\(/;
+const CLEAR_INTERVAL_PATTERN = /\bclearInterval\s*\(/;
+const CSS_UNIVERSAL_SELECTOR_PATTERN = /^\s*\*\s*(?:,|\{)/;
 // Skip comment-only lines so examples or disabled code do not trigger per-line rules.
 const COMMENT_LINE_PATTERN = /^\s*(\/\/|\/\*|\*|<!--)/;
 
@@ -140,6 +153,19 @@ function analyzeHeadHtml(info, content, findings, config) {
         evidence: line.trim(),
       });
     }
+    if (INLINE_HEAD_SCRIPT_PATTERN.test(line) && !/<script[^>]+src\s*=/i.test(line)) {
+      addFinding(findings, config, {
+        rule_id: 'head-inline-script',
+        category: 'LCP',
+        severity: 'warning',
+        file: info.file,
+        line: lineNumber,
+        title: 'Inline script in head blocks parsing and rendering',
+        message: 'Inline scripts in head.html run synchronously and delay first paint.',
+        recommendation: 'Move logic into scripts.js, delayed.js, or a block module instead of inlining it in head.html.',
+        evidence: line.trim(),
+      });
+    }
   });
 }
 
@@ -192,6 +218,8 @@ function analyzeJsPatterns(info, content, findings, config) {
   const allLines = lines(content);
   let domQueryCount = 0;
   const hasObserverDisconnect = /\.disconnect\(\)/.test(content);
+  const hasSetInterval = SET_INTERVAL_PATTERN.test(content);
+  const hasClearInterval = CLEAR_INTERVAL_PATTERN.test(content);
 
   allLines.forEach((line, index) => {
     const lineNumber = index + 1;
@@ -228,7 +256,7 @@ function analyzeJsPatterns(info, content, findings, config) {
       });
     }
 
-    if (/createElement\(\s*['"`](img|source|picture)['"`]\s*\)|new\s+Image\s*\(/.test(line)) {
+    if (DYNAMIC_IMAGE_PATTERN.test(line)) {
       addFinding(findings, config, {
         rule_id: 'dynamic-image-created',
         category: 'LCP',
@@ -242,6 +270,20 @@ function analyzeJsPatterns(info, content, findings, config) {
         recommendation: 'Keep likely LCP images in authored markup when possible, or add preload/fetchpriority guidance for true hero images.',
         evidence: line.trim(),
       });
+      const next10 = allLines.slice(index, index + 10).join('\n');
+      if (!IMAGE_DIMENSION_PATTERN.test(next10)) {
+        addFinding(findings, config, {
+          rule_id: 'image-without-dimensions',
+          category: 'CLS',
+          severity: 'warning',
+          file: info.file,
+          line: lineNumber,
+          title: 'Image is created without width/height attributes',
+          message: 'Images without explicit dimensions can cause cumulative layout shift as the browser learns the image size.',
+          recommendation: 'Set img.width and img.height (or setAttribute) before the image is inserted, matching the rendered aspect ratio.',
+          evidence: line.trim(),
+        });
+      }
     }
 
     if (/loading\s*=\s*['"`]lazy['"`]|setAttribute\(\s*['"`]loading['"`]\s*,\s*['"`]lazy['"`]\s*\)/.test(line)) {
@@ -345,6 +387,104 @@ function analyzeJsPatterns(info, content, findings, config) {
       });
     }
 
+    if (MUTATION_OBSERVER_PATTERN.test(line) && !hasObserverDisconnect) {
+      addFinding(findings, config, {
+        rule_id: 'mutation-observer-no-disconnect',
+        category: 'INP',
+        severity: 'notice',
+        file: info.file,
+        line: lineNumber,
+        title: 'MutationObserver is not disconnected',
+        message: 'MutationObserver instances that are never disconnected retain DOM references and run on every mutation, even after the block is no longer interactive.',
+        recommendation: 'Call observer.disconnect() once the observed work is complete, or scope the observer to a finite lifetime.',
+        evidence: trimmed,
+      });
+    }
+
+    if (UNSAFE_EVAL_PATTERN.test(line)) {
+      addFinding(findings, config, {
+        rule_id: 'unsafe-eval',
+        category: 'EDS',
+        severity: 'error',
+        file: info.file,
+        line: lineNumber,
+        title: 'eval() or new Function() is unsafe and slow',
+        message: 'Dynamic code evaluation defeats Content Security Policy, blocks JIT optimisation, and is a well-known XSS sink.',
+        recommendation: 'Refactor to avoid dynamic evaluation. Use a switch, a lookup table, or structured data instead.',
+        evidence: trimmed,
+      });
+    }
+
+    if (WINDOW_OPEN_BLANK_PATTERN.test(line) && /_blank/.test(line) && !/noopener/.test(line)) {
+      addFinding(findings, config, {
+        rule_id: 'unsafe-window-open',
+        category: 'EDS',
+        severity: 'warning',
+        file: info.file,
+        line: lineNumber,
+        title: 'window.open with _blank is missing noopener',
+        message: 'Opening a target=_blank window without noopener lets the opened page access window.opener and is a reverse-tabnabbing vector. It can also tie the two browsing contexts together and harm performance.',
+        recommendation: "Pass 'noopener,noreferrer' as the third argument to window.open.",
+        evidence: trimmed,
+      });
+    }
+
+    if (DEBUGGER_STATEMENT_PATTERN.test(line)) {
+      addFinding(findings, config, {
+        rule_id: 'debugger-statement',
+        category: 'EDS',
+        severity: 'warning',
+        file: info.file,
+        line: lineNumber,
+        title: 'debugger statement left in code',
+        message: 'A debugger statement pauses execution in browsers with devtools open and is almost never intended for production.',
+        recommendation: 'Remove the debugger statement before merging.',
+        evidence: trimmed,
+      });
+    }
+
+    if (INNER_HTML_OVERWRITE_PATTERN.test(line)) {
+      addFinding(findings, config, {
+        rule_id: 'inner-html-overwrite',
+        category: 'EDS',
+        severity: 'warning',
+        file: info.file,
+        line: lineNumber,
+        title: 'Assigning to innerHTML/outerHTML overwrites authored content',
+        message: 'EDS blocks decorate authored content. Replacing innerHTML wipes that content and can introduce XSS risk when the right-hand side is derived from user or remote input.',
+        recommendation: 'Mutate the existing DOM with append/prepend/replaceChild instead of replacing the whole subtree, or use textContent for safe text replacement.',
+        evidence: trimmed,
+      });
+    }
+
+    if (CONSOLE_STATEMENT_PATTERN.test(line) && info.isJs) {
+      addFinding(findings, config, {
+        rule_id: 'console-statement',
+        category: 'EDS',
+        severity: 'notice',
+        file: info.file,
+        line: lineNumber,
+        title: 'console statement in production code',
+        message: 'Leftover console output is a common code smell and adds main-thread work in volume.',
+        recommendation: 'Remove the console statement or replace it with a feature-flagged logger if needed during development.',
+        evidence: trimmed,
+      });
+    }
+
+    if (info.isGlobalScript && TOP_LEVEL_AWAIT_PATTERN.test(line)) {
+      addFinding(findings, config, {
+        rule_id: 'top-level-await-script',
+        category: 'LCP',
+        severity: 'warning',
+        file: info.file,
+        line: lineNumber,
+        title: 'Top-level await in scripts.js delays the eager phase',
+        message: 'A top-level await in the global script halts the eager loading phase until the awaited promise resolves, which directly delays LCP.',
+        recommendation: 'Move awaited work into an async function called from loadDelayed, or initiate the promise without awaiting and resolve it where it is consumed.',
+        evidence: trimmed,
+      });
+    }
+
     if (info.isGlobalScript && /\bloadScript\(/.test(line)) {
       addFinding(findings, config, {
         rule_id: 'global-loadscript',
@@ -401,6 +541,19 @@ function analyzeJsPatterns(info, content, findings, config) {
       title: 'Many DOM queries in one changed file',
       message: `This file contains ${domQueryCount} DOM queries. Large DOM work can increase rendering and interaction cost.`,
       recommendation: 'Cache repeated selectors, scope queries to the block, and avoid querying more DOM than needed.',
+      file_level: true,
+    });
+  }
+
+  if (hasSetInterval && !hasClearInterval) {
+    addFinding(findings, config, {
+      rule_id: 'setinterval-no-clearinterval',
+      category: 'INP',
+      severity: 'notice',
+      file: info.file,
+      title: 'setInterval is not paired with clearInterval',
+      message: 'A setInterval that is never cleared keeps the main thread busy and retains every closure referenced by the callback, which can cause INP regressions and memory growth.',
+      recommendation: 'Capture the interval handle and call clearInterval when the block is removed or the work completes.',
       file_level: true,
     });
   }
@@ -474,6 +627,20 @@ function analyzeCssPatterns(info, content, findings, config) {
         title: 'Hero-style block uses a CSS background image',
         message: 'CSS background images are harder for the browser to discover early as LCP resources.',
         recommendation: 'Prefer authored img/picture markup for likely LCP images, or explicitly preload the image.',
+        evidence: trimmed,
+      });
+    }
+
+    if (CSS_UNIVERSAL_SELECTOR_PATTERN.test(trimmed)) {
+      addFinding(findings, config, {
+        rule_id: 'css-universal-selector',
+        category: 'EDS',
+        severity: 'notice',
+        file: info.file,
+        line: lineNumber,
+        title: 'Universal CSS selector affects every element',
+        message: 'A universal `*` selector at the top level of a stylesheet applies to every element on every page that loads this CSS, including content outside the block.',
+        recommendation: 'Scope the selector to the block (for example `.block-name *`) or remove the rule.',
         evidence: trimmed,
       });
     }
